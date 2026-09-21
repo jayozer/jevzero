@@ -1,0 +1,26 @@
+# Private configuration (only placeholder examples may be committed)
+.env
+.env.*
+!.env.example
+.venv/
+.jevzero/
+.jev-mail/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+artifacts/
+dist/
+*.egg-info/
+.jevzero-hosted/
+node_modules/
+.next/
+*.tsbuildinfo
+.vercel/
+
+.jevzero-local/
+
+# Downloaded OAuth credentials and local secrets
+client_secret*.json
+local-secrets.json
+google-token.enc

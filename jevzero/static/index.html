@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="mail-token" content="__TOKEN__" />
+    <title>JevZero — A little less inbox.</title>
+    <link rel="stylesheet" href="/mail.css" />
+    <script src="/mail.js" defer></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="JevZero home"
+        ><span class="brand-mark">j<span>↗</span></span> Jev<span
+          class="brand-light"
+          >Zero</span
+        ></a
+      >
+      <div class="workspace">
+        <span class="workspace-icon">◈</span>
+        <div>
+          <strong>Personal workspace</strong
+          ><small id="account">A calmer corner of your day</small>
+        </div>
+      </div>
+      <div class="nav-heading">WORKSPACE</div>
+      <nav id="navigation" aria-label="Mailbox views">
+        <button class="nav-item active" data-view="inbox">
+          <span>▤</span> All mail <b id="nav-total">0</b>
+        </button>
+        <button class="nav-item" data-view="focus">
+          <span>✳</span> Needs attention <b id="nav-focus">0</b>
+        </button>
+        <button class="nav-item" data-view="review">
+          <span>◇</span> Review queue <b id="nav-review">0</b>
+        </button>
+        <button class="nav-item" data-view="digest">
+          <span>☷</span> Your digest
+        </button>
+        <button class="nav-item" data-view="analytics">
+          <span>▥</span> Insights
+        </button>
+        <button class="nav-item" data-view="rules">
+          <span>⑂</span> Rules & preferences
+        </button>
+        <button class="nav-item" data-view="activity">
+          <span>↺</span> Activity & undo
+        </button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="engine">
+          <span class="status-dot"></span><strong>Powered by Jev</strong
+          ><small>Small judgments. Clear decisions.</small>
+        </div>
+        <button id="connection" class="button connect">
+          Connect Gmail <span>↗</span></button
+        ><button id="switch-mode" class="text-button">
+          Switch to Gmail workspace
+        </button>
+      </div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div>
+          <span class="breadcrumb">Workspace</span><span class="slash">/</span
+          ><span id="breadcrumb">All mail</span>
+        </div>
+        <div class="topbar-right">
+          <button id="mobile-mail" class="text-button">Gmail ↗</button>
+          <span id="mode-badge" class="mode-badge">SYNTHETIC DEMO</span
+          ><span class="avatar">A</span>
+        </div>
+      </header>
+      <div class="content">
+        <div id="notice" class="notice">
+          <span>✦</span
+          ><span
+            ><strong>A little less inbox. A little more headspace.</strong>
+            Explore 12 sample emails. No mailbox connected, no API calls.</span
+          ><button id="setup-open" class="text-button">Make it yours ↗</button>
+        </div>
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">YOUR INBOX, WITH INTENTION</div>
+            <h1 id="title">Everything in its place.</h1>
+            <p id="subtitle">
+              A clear view of what matters, and what can wait.
+            </p>
+          </div>
+          <button id="export" class="button secondary">↓ Export view</button>
+        </div>
+        <section
+          id="stats"
+          class="stats"
+          aria-label="Mailbox overview"
+        ></section>
+        <section id="mail-view">
+          <div class="mail-toolbar">
+            <div class="tabs">
+              <button class="tab active" data-tab="all">
+                All messages <span id="tab-count">0</span></button
+              ><button class="tab" data-tab="reply">Reply needed</button
+              ><button class="tab" data-tab="newsletters">Newsletters</button>
+            </div>
+            <label class="search"
+              ><span>⌕</span
+              ><input
+                id="search"
+                placeholder="Search this workspace"
+                aria-label="Search messages"
+              /><kbd>/</kbd></label
+            >
+          </div>
+          <div class="filters">
+            <div class="filter-left">
+              <select id="category-filter" aria-label="Filter by category">
+                <option value="">All categories</option></select
+              ><select id="sort" aria-label="Sort messages">
+                <option value="newest">Newest first</option>
+                <option value="importance">Importance</option>
+                <option value="confidence">Lowest confidence</option>
+              </select>
+            </div>
+            <span class="muted" id="list-note"
+              >Every suggestion stays in your hands.</span
+            >
+          </div>
+          <div id="gmail-controls" class="gmail-controls" hidden>
+            <label
+              >Gmail search<input
+                id="gmail-query"
+                value="in:inbox newer_than:30d"
+                aria-label="Gmail search query" /></label
+            ><button id="sync" class="button secondary">Import 25 emails</button
+            ><button id="more" class="button secondary" hidden>
+              Load next 25</button
+            ><button id="classify" class="button primary">
+              Classify with Jev
+            </button>
+            <div class="privacy-consent">
+              <label
+                ><input id="consent" type="checkbox" /> Allow sending imported
+                sender, subject, date and up to 12,000 body characters per email
+                to TypeSafe for paid classification. Attachments stay
+                excluded.</label
+              >
+            </div>
+          </div>
+          <div class="mail-layout">
+            <div
+              id="mail-list"
+              class="mail-list"
+              aria-label="Email messages"
+            ></div>
+            <aside id="detail" class="detail" aria-label="Message details">
+              <div class="empty">
+                Select a message to explore its classification.
+              </div>
+            </aside>
+          </div>
+        </section>
+        <section id="extra-view" hidden></section>
+        <footer>
+          <span
+            ><span class="tiny-spark">✳</span> Thoughtful classification.
+            You’re in control.</span
+          ><span id="footer-status">Demo fixtures · zero inference calls</span>
+        </footer>
+      </div>
+    </main>
+    <dialog id="setup">
+      <form method="dialog">
+        <button class="dialog-close" aria-label="Close">×</button>
+      </form>
+      <div class="eyebrow">YOUR MAIL, YOUR CALL</div>
+      <h2>Give your inbox a fresh start.</h2>
+      <p>
+        Connect one Gmail account, import a small batch, then choose when to
+        classify it.
+      </p>
+      <ol>
+        <li>
+          Create a Google Cloud <strong>Web application</strong> OAuth client
+          and enable the Gmail API.
+        </li>
+        <li>
+          Add <code>http://127.0.0.1:8767/oauth/callback</code> as an authorized
+          redirect URI (adjust for a custom port).
+        </li>
+        <li>
+          Put <code>GMAIL_CLIENT_ID</code>, <code>GMAIL_CLIENT_SECRET</code>,
+          and <code>TYPESAFE_API_KEY</code> in the ignored
+          <code>.env</code> file. Restart JevZero.
+        </li>
+      </ol>
+      <div class="privacy-box">
+        Google’s <strong>gmail.modify</strong> permission allows reading and
+        modifying mail. This app implements only reading and reviewed label
+        changes. Jev classification sends email text to TypeSafe. Local mail and
+        tokens are stored on disk with owner-only permissions, without
+        application-level encryption.
+      </div>
+      <button id="connect-now" class="button primary">
+        Continue to Google ↗
+      </button>
+      <p class="muted">
+        See docs/usage.md for setup, privacy, and limitations.
+      </p>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite" hidden></div>
+    <div id="busy" role="status" aria-live="polite" hidden>
+      <span class="spinner"></span><span id="busy-text">Working…</span>
+    </div>
+  </body>
+</html>
