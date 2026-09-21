@@ -6,6 +6,16 @@
 
 Classify emails into categories and priorities, spot reply requests, and create custom categories like **Webinars**. Review suggested Gmail labels before applying them, with an activity history and undo.
 
+## Capabilities
+
+- Gmail import, search, filters, attention/review queues, digest, insights, and JSON export.
+- Jev categories, priorities, importance, reply/risk/newsletter/receipt signals, and confidence.
+- Up to 12 custom categories and six natural-language rules.
+- Exact label previews, manual approval, Gmail apply, verified receipts, and undo.
+- Your own keys, Google profile, encrypted local storage, and a demo without API calls.
+
+**[All capabilities and current limits →](docs/capabilities.md)**
+
 ## Install and run
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js 22+](https://nodejs.org/), then:
