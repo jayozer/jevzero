@@ -10,6 +10,7 @@ Classify emails into categories and priorities, spot reply requests, and create 
 
 - Gmail import, search, filters, attention/review queues, digest, insights, and JSON export.
 - Jev categories, priorities, importance, reply/risk/newsletter/receipt signals, and confidence.
+- Optional attachment classification: PDF pages and images judged by the OpenAI Decisions API (invoice, receipt, statement, contract, and more), with payment-due, signature, mismatch, and risk cues.
 - Up to 12 custom categories and six natural-language rules.
 - Exact label previews, manual approval, Gmail apply, verified receipts, and undo.
 - Your own keys, Google profile, encrypted local storage, and a demo without API calls.
@@ -38,6 +39,6 @@ http://127.0.0.1:3000/oauth/callback
 
 **[Complete setup and testing guide →](docs/local.md)** — includes Google credentials, test users, custom categories, and your first import → classify → review → apply → undo test.
 
-No Render, Vercel, or separate JevZero account is required. Credentials and mailbox data are encrypted locally in `.jevzero-local/`; that folder and `.env` files are ignored by Git. Google and TypeSafe require internet access, and classification sends message text to TypeSafe and incurs API usage.
+No Render, Vercel, or separate JevZero account is required. Credentials and mailbox data are encrypted locally in `.jevzero-local/`; that folder and `.env` files are ignored by Git. Google and TypeSafe require internet access, and classification sends message text to TypeSafe and incurs API usage. Attachment classification is off until you save an OpenAI API key and tick a second consent box; it then sends rendered PDF pages and images to OpenAI and incurs usage there.
 
 [Architecture](docs/architecture.md) · [Verification](docs/verification.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [MIT license](LICENSE)

@@ -1,4 +1,10 @@
-import type { CustomCategory, Email, MailState, Rule } from "./types";
+import type {
+  Attachment,
+  CustomCategory,
+  Email,
+  MailState,
+  Rule,
+} from "./types";
 export const categories: Record<string, string> = {
   work: "Work & projects",
   personal: "Personal",
@@ -50,7 +56,12 @@ export const attention = (e: Email) =>
 export const review = (e: Email) =>
   !!e.result?.review_reasons.length && !e.approved;
 export const percent = (n: number) => `${Math.round(n * 100)}%`;
-export function labels(e: Email, cat = category(e), options = categories) {
+export function labels(
+  e: Email,
+  cat = category(e),
+  options = categories,
+  threshold = 0.75,
+) {
   if (!e.result || !Object.hasOwn(options, cat)) return [];
   const values = [
     `JevZero/Category/${cat}`,
@@ -66,7 +77,60 @@ export function labels(e: Email, cat = category(e), options = categories) {
       values.push(`JevZero/Signals/${name}`);
   for (const rule of e.result.rules)
     if (rule.probability >= 0.65) values.push(`JevZero/Rules/${rule.name}`);
+  for (const label of attachmentLabels(e, threshold))
+    if (!values.includes(label)) values.push(label);
   return values;
+}
+export const KIND_NAMES: Record<string, string> = {
+  invoice: "Invoice",
+  receipt: "Receipt",
+  statement: "Statement",
+  contract: "Contract",
+  tax: "Tax document",
+  "identity-or-health": "Identity or health",
+  resume: "Resume",
+  "ticket-or-itinerary": "Ticket or itinerary",
+  "report-or-slides": "Report or slides",
+  marketing: "Marketing",
+  "photo-or-screenshot": "Photo or screenshot",
+  other: "Other",
+};
+export const SENSITIVITY_NAMES = [
+  "public",
+  "routine",
+  "personal financial",
+  "secret",
+];
+export const kindName = (kind: string) => KIND_NAMES[kind] || kind;
+export const sensitivityName = (score: number) =>
+  SENSITIVITY_NAMES[Math.min(3, Math.max(0, Math.round(score)))];
+export const attachmentReason = (a: Attachment) =>
+  (
+    ({
+      inline: "Inline part without a Gmail attachment ID; not sent.",
+      unsupported_type:
+        "Only PDF and image files are sent. Name, type and size only.",
+      too_large: "Larger than 15 MB; not sent.",
+      unreadable_pdf: "Password-protected or broken PDF; not sent.",
+      unreadable_image: "The image could not be decoded; not sent.",
+    }) as Record<string, string>
+  )[a.reason || ""] ||
+  a.reason ||
+  "";
+/** Mirrors classifier.attachment_labels(); the backend list is the one applied. */
+export function attachmentLabels(e: Email, threshold = 0.75) {
+  const values: string[] = [];
+  for (const a of e.attachments || []) {
+    if (!a.result) continue;
+    if (a.result.confidence >= threshold && a.result.kind !== "other")
+      values.push(`JevZero/Attachments/${a.result.kind}`);
+    const p = a.result.predicates;
+    if ((p.risk ?? 0) >= 0.35 || (p.matches_email ?? 1) <= 0.35)
+      values.push("JevZero/Signals/Review risk");
+    if ((p.payment_due ?? 0) >= 0.65)
+      values.push("JevZero/Attachments/Payment due");
+  }
+  return [...new Set(values)];
 }
 export function validateRules(rules: Rule[], threshold: number) {
   if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1)

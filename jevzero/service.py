@@ -1,17 +1,21 @@
 """Application policy: bounded reads, explicit review, journaled writes and verified undo."""
 
+import base64
 import copy
 import os
 import time
 
-from . import classifier, sample
+from . import attachments, classifier, decisions, sample
 from .gmail import normalize
+
+ATTACHMENT_BATCH = 10
 
 
 class MailService:
-    def __init__(self, store, gmail, key_provider=None):
+    def __init__(self, store, gmail, key_provider=None, openai_key_provider=None):
         self.store, self.gmail = store, gmail
         self.key_provider = key_provider
+        self.openai_key_provider = openai_key_provider
         self.mode = "demo"
         if not store.all("demo"):
             for email in sample.messages():
@@ -119,6 +123,9 @@ class MailService:
                 for key in ("result", "approved", "approved_category", "proposed_labels", "fingerprint"):
                     if key in existing:
                         email[key] = existing[key]
+                # Attachment judgments are keyed by Gmail attachment ID; a re-import keeps them.
+                previous = {a["id"]: a for a in existing.get("attachments", []) if a.get("id")}
+                email["attachments"] = [previous.get(a["id"], a) if a.get("id") else a for a in email["attachments"]]
             self.store.put("gmail", email["id"], email)
         self.store.put(
             "meta",
@@ -146,10 +153,69 @@ class MailService:
                 else classifier.classify(email, settings)
             )
             email.update(result=result, fingerprint=classifier.fingerprint(email, settings))
+            self.merge_attachment_reasons(email, settings)
             self.store.put("gmail", email["id"], email)
             stats["completed"] += 1
             stats["latency_ms"] += result["latency_ms"]
             self.store.put("meta", "inference", stats)
+        if body.get("attachments_consent") is True:
+            self.classify_attachments(settings)
+
+    def merge_attachment_reasons(self, email, settings):
+        if not email.get("result"):
+            return
+        _, reasons = classifier.attachment_labels(email.get("attachments", []), settings["threshold"])
+        kept = [r for r in email["result"]["review_reasons"] if not r.startswith(classifier.ATTACHMENT_REASON + ":")]
+        email["result"]["review_reasons"] = kept + reasons
+
+    def classify_attachments(self, settings):
+        """Up to ATTACHMENT_BATCH Decisions API requests; PDF pages and images are rendered locally and discarded."""
+        key = self.openai_key_provider() if self.openai_key_provider else os.environ.get("OPENAI_API_KEY")
+        pending = [
+            (email, meta)
+            for email in self.emails()
+            for meta in email.get("attachments", [])
+            if meta.get("status") == "pending"
+        ]
+        if pending and not key:
+            raise ValueError("Add your OpenAI API key in Connections before attachment classification")
+        requests = 0
+        for email, meta in pending:
+            if requests >= ATTACHMENT_BATCH:
+                break
+            reason = attachments.unsupported_reason(meta)
+            if reason:
+                meta.update(status="unsupported", reason=reason)
+                self.store.put("gmail", email["id"], email)
+                continue
+            stats = self.store.get("meta", "attachment_inference", {"attempts": 0, "completed": 0, "latency_ms": 0})
+            failure = None
+            try:
+                encoded = self.gmail.attachment(email["id"], meta["id"]).get("data", "")
+                data = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
+                images, total, reason = attachments.render_pages(data, meta["mime"])
+                del data
+                if reason:
+                    meta.update(status="unsupported", reason=reason)
+                else:
+                    requests += 1
+                    stats["attempts"] += 1
+                    self.store.put("meta", "attachment_inference", stats)
+                    sent = len(images)
+                    answer = decisions.classify_attachment(email, meta, images, total, key)
+                    del images
+                    meta.update(answer, pages_total=total, pages_sent=sent, reason=None)
+                    stats["completed"] += 1
+                    stats["latency_ms"] += answer.get("latency_ms", 0)
+                    self.store.put("meta", "attachment_inference", stats)
+            except ValueError as error:
+                failure = str(error)[:300]
+                meta.update(status="failed", reason=failure)
+            self.merge_attachment_reasons(email, settings)
+            self.store.put("gmail", email["id"], email)
+            if failure:
+                # Stop the batch; earlier judgments are kept and this file runs again on the next Classify.
+                raise ValueError(failure)
 
     def review(self, body):
         email = self.message(body["id"])
@@ -158,7 +224,10 @@ class MailService:
         if not email["result"]:
             raise ValueError("Classify the message first")
         category = body.get("category", email["result"]["category"])
-        labels = classifier.proposed_labels(email["result"], category, self.settings())
+        settings = self.settings()
+        labels = classifier.proposed_labels(email["result"], category, settings)
+        labels += classifier.attachment_labels(email.get("attachments", []), settings["threshold"])[0]
+        labels = list(dict.fromkeys(labels))
         email.update(approved=True, approved_category=category, proposed_labels=labels)
         self.store.put(self.mode, email["id"], email)
 

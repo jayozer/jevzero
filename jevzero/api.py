@@ -57,7 +57,12 @@ def create_app(settings=None, gmail=None):
     gmail = gmail or Gmail(
         settings.directory, settings.origin.rstrip("/"), cipher=cipher, credentials=credentials, include_profile=True
     )
-    service = MailService(store, gmail, key_provider=lambda: credentials.values()["typesafe_key"])
+    service = MailService(
+        store,
+        gmail,
+        key_provider=lambda: credentials.values()["typesafe_key"],
+        openai_key_provider=lambda: credentials.values()["openai_key"],
+    )
     service.mode = "gmail"
     lock = threading.Lock()
     executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="jevzero")

@@ -135,13 +135,36 @@ def test_gmail_mime_uses_plain_text_excludes_attachments_and_bounds_body():
                 part("text/plain", "A" * 13000),
                 part("text/html", "<script>bad()</script><p>Alternative</p>"),
                 part("text/plain", "SECRET ATTACHMENT", filename="private.txt"),
+                {
+                    "mimeType": "application/pdf",
+                    "filename": "invoice.pdf",
+                    "body": {"attachmentId": "att-1", "size": 2048},
+                },
+                {
+                    "mimeType": "message/rfc822",
+                    "filename": "forwarded.eml",
+                    "body": {"attachmentId": "att-2", "size": 10},
+                    "parts": [part("text/plain", "NESTED SECRET")],
+                },
             ]
         },
     }
     email = normalize(raw)
     assert len(email["body"]) == 12000 and email["truncated"]
-    assert "SECRET" not in email["body"]
+    assert "SECRET" not in json.dumps(email)
     assert "Alternative" not in email["body"]
+    # Only name, type and size are kept; bytes are never read at import.
+    assert [a["filename"] for a in email["attachments"]] == ["private.txt", "invoice.pdf", "forwarded.eml"]
+    assert email["attachments"][0]["id"] == ""
+    assert email["attachments"][1] == {
+        "id": "att-1",
+        "filename": "invoice.pdf",
+        "mime": "application/pdf",
+        "size": 2048,
+        "status": "pending",
+        "reason": None,
+        "result": None,
+    }
 
 
 def test_html_fallback_is_text_without_loading_remote_content():
@@ -170,9 +193,17 @@ class FakeGmail:
         self.fail = False
         self.apply_then_timeout = False
         self.bad_read = False
+        self.attachment_bytes = b""
 
     def profile(self):
         return self.account
+
+    def attachment(self, key, attachment_id):
+        self.calls.append(("attachment", key, attachment_id))
+        if self.fail:
+            raise ValueError("network lost")
+        data = base64.urlsafe_b64encode(self.attachment_bytes).decode().rstrip("=")
+        return {"size": len(self.attachment_bytes), "data": data}
 
     def labels(self):
         return [{"id": value, "name": key} for key, value in self.definitions.items()]

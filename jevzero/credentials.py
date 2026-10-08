@@ -4,6 +4,7 @@ import os
 
 FIELDS = {
     "typesafe_key": "TYPESAFE_API_KEY",
+    "openai_key": "OPENAI_API_KEY",
     "google_client_id": "GMAIL_CLIENT_ID",
     "google_client_secret": "GMAIL_CLIENT_SECRET",
 }
@@ -21,11 +22,12 @@ class Credentials:
         values = self.values()
         return {
             "typesafe": bool(values["typesafe_key"]),
+            "openai": bool(values["openai_key"]),
             "google": bool(values["google_client_id"] and values["google_client_secret"]),
         }
 
     def save(self, body, connected=False):
-        if not isinstance(body, dict) or set(body) - {*FIELDS, "remove_typesafe", "remove_google"}:
+        if not isinstance(body, dict) or set(body) - {*FIELDS, "remove_typesafe", "remove_openai", "remove_google"}:
             raise ValueError("Unknown connection setting")
         saved = self.store.get("secrets", "providers", {})
         if connected and (body.get("remove_google") or any(body.get(k) for k in FIELDS if k.startswith("google_"))):
@@ -46,6 +48,7 @@ class Credentials:
             saved[key] = value
         for flag, keys in [
             ("remove_typesafe", ["typesafe_key"]),
+            ("remove_openai", ["openai_key"]),
             ("remove_google", ["google_client_id", "google_client_secret"]),
         ]:
             if body.get(flag) is True:

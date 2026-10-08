@@ -13,6 +13,25 @@ export type Classification = {
   source: string;
   latency_ms: number;
 };
+export type AttachmentResult = {
+  kind: string;
+  confidence: number;
+  probabilities: Record<string, number>;
+  predicates: Record<string, number>;
+  sensitivity: number; // 0 public … 3 secret
+  model: string;
+};
+export type Attachment = {
+  id: string; // Gmail attachmentId; the only handle to the bytes
+  filename: string;
+  mime: string;
+  size: number;
+  status: "pending" | "classified" | "unsupported" | "refused" | "failed";
+  reason?: string | null;
+  pages_total?: number;
+  pages_sent?: number;
+  result: AttachmentResult | null;
+};
 export type Email = {
   id: string;
   thread_id: string;
@@ -23,6 +42,7 @@ export type Email = {
   timestamp: number;
   label_ids: string[];
   truncated: boolean;
+  attachments?: Attachment[];
   result: Classification | null;
   approved: boolean;
   approved_category?: string;
@@ -38,7 +58,7 @@ export type Receipt = {
   added: string[];
 };
 export type MailState = {
-  credentials?: { typesafe: boolean; google: boolean };
+  credentials?: { typesafe: boolean; openai?: boolean; google: boolean };
   google_profile?: { name: string; email: string; picture: string } | null;
   mode: "demo" | "gmail";
   messages: Email[];

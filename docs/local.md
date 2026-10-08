@@ -56,7 +56,7 @@ Set `JEVZERO_LOCAL_DATA_DIR` to an absolute directory outside the repository if 
 
 The local browser still uses HttpOnly/SameSite cookies, exact host/origin checks, bounded request bodies, and a private server-to-server token to keep other websites from operating the app. These internal protections do not create a user-facing login. Anyone with access to your OS account can use the local workspace. Do not bind either server to a LAN/public address or expose them through a tunnel.
 
-Data leaves the computer only for the requested integrations: Google OAuth/mailbox requests, optional Google profile image loading, and explicitly selected message text sent to TypeSafe. Classification sends sender, subject, date, up to 12,000 body characters and rule instructions; it excludes attachments and Google tokens. This is not offline inference. Provider retention terms have not been qualified here.
+Data leaves the computer only for the requested integrations: Google OAuth/mailbox requests, optional Google profile image loading, explicitly selected message text sent to TypeSafe, and, only with the second consent checkbox and a saved OpenAI key, rendered attachment pages sent to OpenAI. Body classification sends sender, subject, date, up to 12,000 body characters and rule instructions to TypeSafe; it excludes attachments and Google tokens. Attachment classification sends the first 3 pages of each PDF or the image itself, plus sender, subject, date, file name, type, size and page counts, to the OpenAI Decisions API; it excludes body text. Downloaded bytes and rendered pages are discarded after the request. This is not offline inference. Provider retention terms have not been qualified here.
 
 ## Ports and development
 

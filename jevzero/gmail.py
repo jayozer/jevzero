@@ -41,7 +41,7 @@ class PlainText(HTMLParser):
 def normalize(raw):
     payload = raw.get("payload", {})
     headers = {h["name"].lower(): h["value"] for h in payload.get("headers", [])}
-    plain, rich = [], []
+    plain, rich, attachments = [], [], []
     unavailable = False
 
     def walk(part, depth=0):
@@ -50,7 +50,20 @@ def normalize(raw):
             unavailable = True
             return
         if part.get("filename") or part.get("mimeType", "").startswith("message/"):
-            return  # Attachments, including forwarded message files, are never ingested.
+            body = part.get("body", {})
+            if part.get("filename") and len(attachments) < 10:
+                attachments.append(
+                    {
+                        "id": str(body.get("attachmentId") or "")[:1000],
+                        "filename": str(part["filename"])[:200],
+                        "mime": str(part.get("mimeType", ""))[:100],
+                        "size": int(body.get("size", 0) or 0),
+                        "status": "pending",
+                        "reason": None,
+                        "result": None,
+                    }
+                )
+            return  # Attachment bytes are never read at import; only name, type and size are kept.
         mime = part.get("mimeType", "")
         if mime in {"text/plain", "text/html"}:
             body = part.get("body", {})
@@ -96,6 +109,7 @@ def normalize(raw):
         "body": body[:12000],
         "truncated": unavailable or len(body) > 12000,
         "label_ids": raw.get("labelIds", []),
+        "attachments": attachments,
         "result": None,
         "approved": False,
     }
@@ -248,6 +262,13 @@ class Gmail:
     def message(self, message_id, full=False):
         return self.request(
             "GET", "/messages/" + quote(message_id, safe=""), params={"format": "full" if full else "minimal"}
+        )
+
+    def attachment(self, message_id, attachment_id):
+        # Read-only; the bytes are rendered locally and discarded, never stored.
+        return self.request(
+            "GET",
+            "/messages/" + quote(message_id, safe="") + "/attachments/" + quote(attachment_id, safe=""),
         )
 
     def labels(self):

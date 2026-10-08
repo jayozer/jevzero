@@ -237,3 +237,27 @@ def proposed_labels(result, category=None, settings=None):
             labels.append(f"JevZero/Signals/{label}")
     labels += [f"JevZero/Rules/{r['name']}" for r in result["rules"] if r["probability"] >= 0.65]
     return labels
+
+
+ATTACHMENT_REASON = "Attachment"
+
+
+def attachment_labels(attachments, threshold=0.75):
+    """Labels and review reasons from classified attachments. Never an action."""
+    labels, reasons = [], []
+    for meta in attachments or []:
+        result = meta.get("result") if isinstance(meta, dict) else None
+        if not result:
+            continue
+        name = meta.get("filename", "file")
+        if result["confidence"] >= threshold and result["kind"] != "other":
+            labels.append(f"JevZero/Attachments/{result['kind']}")
+        else:
+            reasons.append(f"{ATTACHMENT_REASON}: uncertain kind for {name}")
+        predicates = result["predicates"]
+        if predicates["risk"] >= 0.35 or predicates["matches_email"] <= 0.35:
+            labels.append("JevZero/Signals/Review risk")
+            reasons.append(f"{ATTACHMENT_REASON}: needs a look ({name})")
+        if predicates["payment_due"] >= 0.65:
+            labels.append("JevZero/Attachments/Payment due")
+    return list(dict.fromkeys(labels)), reasons

@@ -43,6 +43,9 @@ import {
   sender,
   signal,
   validateRules,
+  kindName,
+  sensitivityName,
+  attachmentReason,
 } from "@/lib/mail";
 import type { CustomCategory, Email, MailState, Rule } from "@/lib/types";
 
@@ -143,11 +146,17 @@ export default function Dashboard() {
     ),
     [keys, setKeys] = useState({
       typesafe_key: "",
+      openai_key: "",
       google_client_id: "",
       google_client_secret: "",
     }),
-    [connections, setConnections] = useState({
+    [connections, setConnections] = useState<{
+      typesafe: boolean;
+      openai?: boolean;
+      google: boolean;
+    }>({
       typesafe: false,
+      openai: false,
       google: false,
     }),
     [profile, setProfile] = useState<MailState["google_profile"]>(null),
@@ -159,7 +168,8 @@ export default function Dashboard() {
     [rules, setRules] = useState<Rule[]>([]),
     [customCategories, setCustomCategories] = useState<CustomCategory[]>([]),
     [threshold, setThreshold] = useState(0.75),
-    [consent, setConsent] = useState(false);
+    [consent, setConsent] = useState(false),
+    [attachmentsConsent, setAttachmentsConsent] = useState(false);
   const demoState = useRef<MailState>(seed()),
     searchRef = useRef<HTMLInputElement>(null),
     busyRef = useRef(false),
@@ -393,7 +403,7 @@ export default function Dashboard() {
   }
   async function saveKeys(
     e?: React.FormEvent,
-    remove?: "remove_typesafe" | "remove_google",
+    remove?: "remove_typesafe" | "remove_openai" | "remove_google",
   ) {
     e?.preventDefault();
     if (busyRef.current) return;
@@ -407,6 +417,7 @@ export default function Dashboard() {
       setConnections(result);
       setKeys({
         typesafe_key: "",
+        openai_key: "",
         google_client_id: "",
         google_client_secret: "",
       });
@@ -877,6 +888,92 @@ export default function Dashboard() {
                           original before deciding.
                         </div>
                       )}
+                      {(email.attachments?.length ?? 0) > 0 && (
+                        <div className="attachments">
+                          <div className="attachments-heading">
+                            <h3>Attachments</h3>
+                            <span>
+                              {email.attachments!.length} file
+                              {email.attachments!.length === 1 ? "" : "s"} ·
+                              Decisions API
+                            </span>
+                          </div>
+                          {email.attachments!.map((a) => (
+                            <div
+                              className="attachment"
+                              key={a.id || a.filename}
+                            >
+                              <div className="attachment-name">
+                                <b>{a.filename}</b>
+                                <small>
+                                  {a.mime.split("/")[1]?.toUpperCase() ||
+                                    "file"}{" "}
+                                  · {Math.max(1, Math.round(a.size / 1024))} KB
+                                  {a.pages_total
+                                    ? ` · ${a.pages_total} page${a.pages_total === 1 ? "" : "s"} · ${a.pages_sent} sent`
+                                    : ""}
+                                </small>
+                              </div>
+                              {a.status === "classified" && a.result ? (
+                                <div className="attachment-result">
+                                  <span className="attachment-kind">
+                                    {kindName(a.result.kind)} ·{" "}
+                                    {percent(a.result.confidence)}
+                                  </span>
+                                  <span className="attachment-tags">
+                                    {a.result.predicates.payment_due >=
+                                      0.65 && (
+                                      <span className="exact-label">
+                                        Payment due
+                                      </span>
+                                    )}
+                                    {a.result.predicates.signature_requested >=
+                                      0.65 && (
+                                      <span className="exact-label">
+                                        Signature requested
+                                      </span>
+                                    )}
+                                    {(a.result.predicates.risk >= 0.35 ||
+                                      a.result.predicates.matches_email <=
+                                        0.35) && (
+                                      <span className="exact-label warn">
+                                        Needs a look
+                                      </span>
+                                    )}
+                                    <span className="exact-label dim">
+                                      Sensitivity:{" "}
+                                      {sensitivityName(a.result.sensitivity)}
+                                    </span>
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="attachment-result">
+                                  <span
+                                    className={`attachment-status ${a.status}`}
+                                  >
+                                    {a.status === "pending"
+                                      ? "Not classified"
+                                      : a.status === "unsupported"
+                                        ? "Not supported"
+                                        : a.status === "refused"
+                                          ? "Model declined"
+                                          : "Failed"}
+                                  </span>
+                                  <small>
+                                    {a.status === "pending"
+                                      ? "Allow attachment classification in the next Classify step."
+                                      : a.status === "refused"
+                                        ? "OpenAI refused the questions for this file. Review by hand."
+                                        : a.status === "failed"
+                                          ? `${attachmentReason(a)} It stays failed until a later Classify.`
+                                          : attachmentReason(a)}
+                                  </small>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {email.result ? (
                         <>
                           <div className="judgment">
@@ -948,13 +1045,16 @@ export default function Dashboard() {
                                 Exact Gmail labels to apply
                               </span>
                               <div>
-                                {labels(email, draftCategory, categories).map(
-                                  (label) => (
-                                    <span className="exact-label" key={label}>
-                                      {label}
-                                    </span>
-                                  ),
-                                )}
+                                {labels(
+                                  email,
+                                  draftCategory,
+                                  categories,
+                                  state.settings.threshold,
+                                ).map((label) => (
+                                  <span className="exact-label" key={label}>
+                                    {label}
+                                  </span>
+                                ))}
                               </div>
                             </div>
                             <details className="signal-details">
@@ -1543,6 +1643,38 @@ export default function Dashboard() {
                       Remove TypeSafe key
                     </button>
                   )}
+                  <label>
+                    OpenAI API key{" "}
+                    <span className="saved-status">
+                      {connections.openai
+                        ? "Saved"
+                        : "Optional, for attachments"}
+                    </span>
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={keys.openai_key}
+                      placeholder={
+                        connections.openai
+                          ? "Enter a new key to replace"
+                          : "Your OpenAI key (Decisions API)"
+                      }
+                      onChange={(e) =>
+                        setKeys({ ...keys, openai_key: e.target.value })
+                      }
+                    />
+                  </label>
+                  {connections.openai && (
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={!!busy}
+                      onClick={() => saveKeys(undefined, "remove_openai")}
+                    >
+                      Remove OpenAI key
+                    </button>
+                  )}
                   <details open={!connections.google} className="google-setup">
                     <summary>
                       Google OAuth setup{" "}
@@ -1622,7 +1754,9 @@ export default function Dashboard() {
                 <p className="microcopy">
                   Keys are encrypted locally and never displayed again. Saving
                   does not validate the key or make paid calls. Your TypeSafe
-                  account is billed when you classify emails.
+                  account is billed when you classify emails; your OpenAI
+                  account is billed only when you also allow attachment
+                  classification.
                 </p>
                 <button
                   className="button dark full"
@@ -1671,7 +1805,28 @@ export default function Dashboard() {
               />
               <span>
                 I allow sending sender, subject, date, and up to 12,000 body
-                characters per email to TypeSafe. Attachments are excluded.
+                characters per email to TypeSafe. Attachments are not sent to
+                TypeSafe.
+              </span>
+            </label>
+            <label className="consent secondary">
+              <input
+                type="checkbox"
+                checked={attachmentsConsent}
+                disabled={!connections.openai}
+                onChange={(e) => setAttachmentsConsent(e.target.checked)}
+              />
+              <span>
+                I also allow sending the first 3 pages of each PDF and each
+                image attachment, with the sender and subject, to OpenAI
+                (Decisions API). Up to 10 files per step, one paid request each.
+                Attachment bytes are not stored.
+                {!connections.openai && (
+                  <>
+                    {" "}
+                    <em>Save an OpenAI key in Connections to enable this.</em>
+                  </>
+                )}
               </span>
             </label>
             <button
@@ -1679,7 +1834,11 @@ export default function Dashboard() {
               disabled={!consent || !!busy}
               onClick={() => {
                 setModal(null);
-                run("classify", { consent: true });
+                run("classify", {
+                  consent: true,
+                  attachments_consent:
+                    attachmentsConsent && !!connections.openai,
+                });
               }}
             >
               Classify this batch <ArrowRight size={16} />

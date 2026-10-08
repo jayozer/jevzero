@@ -2068,3 +2068,109 @@ h1 {
 .additional-rules-heading {
   margin-top: 32px;
 }
+
+/* Attachments (OpenAI Decisions API) */
+.attachments {
+  margin: 20px 0;
+  border: 1px solid #e0e7d5;
+  border-radius: 6px;
+  background: #fbfbf7;
+}
+.attachments-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8ece3;
+}
+.attachments-heading h3 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
+}
+.attachments-heading span {
+  font-size: 10px;
+  color: #7c8e6d;
+}
+.attachment {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f3ec;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.attachment:last-child {
+  border-bottom: 0;
+}
+.attachment-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.attachment-name b {
+  overflow-wrap: anywhere;
+}
+.attachment-name small,
+.attachment-result small {
+  color: #7c8e6d;
+  font-size: 10px;
+}
+.attachment-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+  max-width: 55%;
+}
+.attachment-kind {
+  color: var(--forest, #1f5a3a);
+  font-weight: 600;
+}
+.attachment-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.exact-label.warn {
+  border-color: #ead6c4;
+  background: #f7ebdd;
+  color: #a0491c;
+}
+.exact-label.dim {
+  color: #8a9480;
+}
+.attachment-status {
+  font-weight: 600;
+  color: #8a9480;
+}
+.attachment-status.refused {
+  color: #a0491c;
+}
+.attachment-status.failed {
+  color: #a12b2b;
+}
+.consent.secondary {
+  margin-top: -12px;
+}
+.consent.secondary em {
+  font-style: normal;
+  color: #a0491c;
+}
+@media (max-width: 720px) {
+  .attachment {
+    flex-direction: column;
+  }
+  .attachment-result {
+    align-items: flex-start;
+    text-align: left;
+    max-width: 100%;
+  }
+  .attachment-tags {
+    justify-content: flex-start;
+  }
+}

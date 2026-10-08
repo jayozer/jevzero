@@ -62,12 +62,16 @@ def test_local_credentials_are_private_and_removable(settings, monkeypatch):
                 "google_client_secret": "google-secret-9382",
             },
         )
-        assert result.json() == {"typesafe": True, "google": True}
+        assert result.json() == {"typesafe": True, "openai": False, "google": True}
         assert "private-test-key" not in client.get("/state").text
         assert "google-secret" not in client.get("/credentials").text
         assert b"private-test-key" not in (settings.directory / "mail.sqlite3").read_bytes()
         assert client.post("/credentials", json={"typesafe_key": ""}).json()["typesafe"]
         assert client.post("/credentials", json={"remove_typesafe": True}).json()["typesafe"] is False
+        assert client.post("/credentials", json={"openai_key": "sk-private-openai-9382"}).json()["openai"]
+        assert "sk-private-openai" not in client.get("/credentials").text
+        assert b"sk-private-openai" not in (settings.directory / "mail.sqlite3").read_bytes()
+        assert client.post("/credentials", json={"remove_openai": True}).json()["openai"] is False
         gmail.connected = True
         assert client.post("/credentials", json={"remove_google": True}).status_code == 400
 
